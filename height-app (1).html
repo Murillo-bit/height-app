@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Height Predictor FINAL SAFE</title>
+
+<script>
+var ChartLoaded = false;
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"
+onload="ChartLoaded=true"
+onerror="ChartLoaded=false"></script>
+
+<style>
+body { font-family: Arial; margin:0; padding:20px; background:#0f172a; color:white; }
+.container { max-width:600px; margin:auto; }
+.card { background:#1e293b; padding:10px; margin-top:10px; border-radius:10px; }
+input, select { width:100%; padding:8px; margin:5px 0; }
+button { padding:8px; margin-top:5px; border:none; background:#22c55e; color:white; }
+.top { border:2px solid gold; }
+canvas { background:white; border-radius:10px; margin-top:10px; }
+</style>
+
+</head>
+<body>
+
+<div class="container">
+<h1>Height Predictor</h1>
+
+<input id="name" placeholder="Name">
+<input id="age" type="number" placeholder="Age">
+<input id="height" type="number" placeholder="Height (cm)">
+<input id="father" type="number" placeholder="Father Height">
+<input id="mother" type="number" placeholder="Mother Height">
+<input id="sleep" type="number" placeholder="Sleep Hours">
+
+<select id="tanner">
+<option value="1">Tanner 1</option>
+<option value="2">Tanner 2</option>
+<option value="3">Tanner 3</option>
+<option value="4">Tanner 4</option>
+<option value="5">Tanner 5</option>
+</select>
+
+<input id="sportsDetail" placeholder="Sports">
+
+<label><input type="checkbox" id="sports"> Plays Sports</label>
+<label><input type="checkbox" id="hormones"> Hormones</label>
+
+<button onclick="addPerson()">Add</button>
+<button onclick="simulateMonth()">+ Month</button>
+<button onclick="resetData()">Reset</button>
+
+<h2 id="status"></h2>
+<h2 id="winner"></h2>
+
+<canvas id="chart"></canvas>
+<div id="output"></div>
+
+</div>
+
+<script>
+var people = [];
+var chart = null;
+
+function safe(n,d){ return isNaN(n)?d:n; }
+
+function predict(p){
+ var base=(p.father+p.mother+13)/2;
+ if(p.sleep>=9) base+=1;
+ if(p.sports) base+=1;
+ if(p.hormones) base+=3;
+ if(p.tanner==2) base+=2;
+ if(p.tanner==3) base+=3;
+ if(p.tanner==4) base+=1;
+ if(p.tanner==5) base-=2;
+ return Math.round(base);
+}
+
+function growthStatus(p){
+ if(p.tanner<=2) return "Entering growth";
+ if(p.tanner==3) return "PEAK growth";
+ if(p.tanner==4) return "Slowing";
+ return "Almost done";
+}
+
+function addPerson(){
+ var p={
+  name:document.getElementById("name").value||"Unknown",
+  age:safe(Number(document.getElementById("age").value),13),
+  height:safe(Number(document.getElementById("height").value),150),
+  father:safe(Number(document.getElementById("father").value),170),
+  mother:safe(Number(document.getElementById("mother").value),160),
+  sleep:safe(Number(document.getElementById("sleep").value),8),
+  sports:document.getElementById("sports").checked,
+  hormones:document.getElementById("hormones").checked,
+  tanner:Number(document.getElementById("tanner").value),
+  sportsDetail:document.getElementById("sportsDetail").value
+ };
+ people.push(p);
+ display();
+}
+
+function simulateMonth(){
+ for(var i=0;i<people.length;i++){
+  var g=Math.random()*1+0.3;
+  people[i].height=Math.round((people[i].height+g)*10)/10;
+  people[i].age=Math.round((people[i].age+0.08)*100)/100;
+ }
+ display();
+}
+
+function del(i){
+ people.splice(i,1);
+ display();
+}
+
+function display(){
+ var out=document.getElementById("output");
+ var win=document.getElementById("winner");
+ var status=document.getElementById("status");
+
+ out.innerHTML="";
+
+ if(people.length===0){
+  if(chart){ chart.destroy(); chart=null; }
+  return;
+ }
+
+ var tallest=0;
+
+ for(var i=0;i<people.length;i++){
+  var h=predict(people[i]);
+  if(h>tallest) tallest=h;
+ }
+
+ status.innerHTML="Status: "+growthStatus(people[0]);
+
+ var labels=[];
+ var data=[];
+
+ for(var i=0;i<people.length;i++){
+  var p=people[i];
+  var pred=predict(p);
+
+  labels.push(p.name);
+  data.push(p.height);
+
+  var div=document.createElement("div");
+  div.className="card";
+  if(pred===tallest) div.className+=" top";
+
+  div.innerHTML=
+   "<h3>"+p.name+"</h3>"+
+   "<p>Age: "+p.age+"</p>"+
+   "<p>Height: "+p.height+" cm</p>"+
+   "<p>Tanner: "+p.tanner+"</p>"+
+   "<p>Sports: "+p.sportsDetail+"</p>"+
+   "<p><b>Predicted: "+pred+" cm</b></p>"+
+   "<button onclick='del("+i+")'>Delete</button>";
+
+  out.appendChild(div);
+ }
+
+ win.innerHTML="Tallest: "+tallest+" cm";
+
+ if(ChartLoaded){
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById("chart"),{
+   type:"line",
+   data:{labels:labels,datasets:[{data:data}]},
+   options:{plugins:{legend:{display:false}}}
+  });
+ }
+}
+
+function resetData(){
+ people=[];
+ display();
+}
+</script>
+
+</body>
+</html>
